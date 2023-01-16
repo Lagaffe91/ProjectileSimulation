@@ -7,8 +7,9 @@
 
 CannonRenderer::CannonRenderer()
 {
-    // Do not use ImDrawList or ImGuiIO here because they are invalid at this point
-    // Use this function only to load resources (images, sounds) if needed
+    constexpr int vectorDefSize = 20;
+
+    curvePoints.reserve(vectorDefSize);
 }
 
 CannonRenderer::~CannonRenderer()
@@ -59,6 +60,11 @@ void CannonRenderer::DrawProjectileMotion(const CannonState& cannon)
         this->ToPixels(cannon.projectile.position),
         cannon.projectile.mass * 0.25f, 
         IM_COL32_WHITE);
+ 
+    for (size_t i = 1; i < curvePoints.size(); i++)
+    {
+        dl->AddLine(curvePoints[i-1], curvePoints[i], IM_COL32_WHITE);
+    }
 }
 
 CannonGame::CannonGame(CannonRenderer& renderer)
@@ -80,6 +86,18 @@ CannonGame::CannonGame(CannonRenderer& renderer)
 CannonGame::~CannonGame()
 {
 
+}
+
+
+float2 SimulateProjectilePos(float time, CannonState cannon)
+{
+    float2 pos
+    {
+        time * cannon.initialSpeed * cosf(cannon.angle)+ cannon.position.x,
+        -(1/2 * GRAVITY * (time * time)) + cannon.initialSpeed * time * sinf(cannon.angle) + cannon.position.y //Float approximation in division be carefull !
+    };
+
+    return pos;
 }
 
 void CannonGame::UpdateAndDraw(const float& deltaTime)
@@ -104,10 +122,20 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
             p->launched = true;
             absolute_time = 0;
             p->position = cannonState.position;
+
+            renderer.curvePoints.clear();
         }
 
     }
     ImGui::End();
+
+
+    renderer.curvePoints.clear();
+    //Get curve of motion
+    for (float i = 0; i < renderer.curvePoints.capacity(); i+= renderer.curvePoints.capacity()*0.5)
+    {
+        renderer.curvePoints.push_back(renderer.ToPixels(SimulateProjectilePos(i, cannonState)));
+    }
 
     if (p->launched)
     {
@@ -139,3 +167,4 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
     renderer.DrawCannon(cannonState);
     renderer.DrawProjectileMotion(cannonState);
 }
+
