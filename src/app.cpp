@@ -12,7 +12,7 @@ App::~App()
 {
 }
 
-void App::Update()
+void App::Update(float deltaTime)
 {
     cannonGame.UpdateAndDraw();
 }

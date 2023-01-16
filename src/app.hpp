@@ -8,7 +8,7 @@ public:
     App();
     ~App();
 
-    void Update();
+	void Update(float deltaTime);
 
 private:
     CannonRenderer cannonRenderer;

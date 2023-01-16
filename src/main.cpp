@@ -47,9 +47,12 @@ int main(int argc, char* argv[])
 
     App* app = new App();
 
+	double deltaTime = 0.0;
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
+		double timeNow = glfwGetTime();
+		double timeEnd;
         glfwPollEvents();
 
         // Start the Dear ImGui frame
@@ -59,7 +62,7 @@ int main(int argc, char* argv[])
 
         //ImGui::ShowDemoWindow(nullptr);
         
-        app->Update();
+        app->Update(deltaTime);
 
         // Rendering
         ImGui::Render();
@@ -71,6 +74,8 @@ int main(int argc, char* argv[])
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
+		timeEnd = glfwGetTime();
+		deltaTime = timeEnd - timeNow;
     }
 
     delete app;
