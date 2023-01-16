@@ -49,26 +49,28 @@ void CannonRenderer::DrawGround()
 
 void CannonRenderer::DrawCannon(const CannonState& cannon)
 {   
-    // For example (Remove this and do your own)
     float2 pos = this->ToPixels(cannon.position);
     dl->AddRect(pos, { pos.x - 10.f, pos.y - 10.f }, IM_COL32_WHITE);
 }
 
 void CannonRenderer::DrawProjectileMotion(const CannonState& cannon)
 {
-    // if (cannon.projectile.launched)
-    dl->AddCircle(this->ToPixels(cannon.projectile.position), cannon.projectile.mass, IM_COL32_WHITE);
+    dl->AddCircle(
+        this->ToPixels(cannon.projectile.position),
+        cannon.projectile.mass * 0.25f, 
+        IM_COL32_WHITE);
 }
 
 CannonGame::CannonGame(CannonRenderer& renderer)
     : renderer(renderer)
 {
     cannonState.position.x = -15.f;
+    cannonState.position.y = 10.f;
     cannonState.initialSpeed = 15.f,
     cannonState.angle = TAU / 8.f;
     cannonState.projectile = {
         false,
-        10.f,
+        30.f,
         cannonState.position,
         { 0.f, 0.f },
         { 0.f, 0.f }
@@ -87,53 +89,52 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
     renderer.PreUpdate();
 
-    if (ImGui::Begin("Canon state", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::Begin("Simulation settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        if (ImGui::Button("Launch") && !p->launched)
+        ImGui::SliderFloat("Displacement", &cannonState.position.x, -20.f, -10.f);
+        ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
+        ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
+        ImGui::SliderFloat("Mass", &cannonState.projectile.mass, 0.f, 100.f);
+
+        ImGui::Text("Acceleration (x = %.2f, y = %.2f)\nVelocity (x = %.2f, y = %.2f)\nPosition (x = %.2f, y = %.2f)",
+                    p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
+        
+        if (ImGui::Button(p->launched ? "Simulating" : "Launch") && !p->launched)
         {
             p->launched = true;
             absolute_time = 0;
             p->position = cannonState.position;
         }
-        ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
-        ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
 
-        ImGui::Text("Acceleration\n  x = %.2f  y = %.2f\nVelocity\n  x = %.2f  y = %.2f\nPosition\n  x = %.2f  y = %.2f",
-                    p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
     }
     ImGui::End();
 
     if (p->launched)
     {
-        // Physics computations
         const float c_deltaTime = 0.001666f;
         float simulationTime = 0;
+
         while (simulationTime < deltaTime)
         {
             absolute_time += c_deltaTime;
-            p->acceleration =
-            {
-                0.f,
-                p->mass * -GRAVITY
-            };
 
-            const float speed_y = cannonState.initialSpeed * sinf(cannonState.angle);
+            p->acceleration = { 0.f, p->mass * -GRAVITY };
+
             p->speed =
             {
                 cannonState.initialSpeed * cosf(cannonState.angle),
-                speed_y - (p->acceleration.y * deltaTime)
+                cannonState.initialSpeed * sinf(cannonState.angle) - (p->acceleration.y * c_deltaTime)
             };
-            if (p->position.y <= 0.0f)
+
+            if (p->position.y <= 0.f)
                 p->launched = false;
-            if (p->position.y > 0.0f)
+            else
                 p->position = cannonState.position + p->speed * absolute_time + (p->acceleration * absolute_time * absolute_time * 0.5);
+
             simulationTime += c_deltaTime;
         }
     }
-    if (absolute_time == 0)
-        p->position = cannonState.position;
 
-    // Draw cannon
     renderer.DrawGround();
     renderer.DrawCannon(cannonState);
     renderer.DrawProjectileMotion(cannonState);
