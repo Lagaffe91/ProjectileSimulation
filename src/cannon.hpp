@@ -4,11 +4,19 @@
 
 #include "types.hpp"
 
+struct Projectile
+{
+    bool launched;
+    float mass;
+    float2 position, speed, acceleration;
+};
+
 struct CannonState
 {
     float2 position;
     float angle; // In radians
     float initialSpeed;
+    Projectile projectile;
 };
 
 // Renderer class
@@ -43,7 +51,7 @@ public:
     CannonGame(CannonRenderer& renderer);
     ~CannonGame();
 
-    void UpdateAndDraw();
+    void UpdateAndDraw(const float& deltaTime);
 
 private:
     CannonRenderer& renderer;

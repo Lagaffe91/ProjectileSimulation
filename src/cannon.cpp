@@ -3,6 +3,7 @@
 
 #include "calc.hpp"
 #include "cannon.hpp"
+#include "types.hpp"
 
 CannonRenderer::CannonRenderer()
 {
@@ -54,27 +55,31 @@ void CannonRenderer::DrawGround()
 }
 
 void CannonRenderer::DrawCannon(const CannonState& cannon)
-{
-    // TODO: Draw cannon
-    
+{   
     // For example (Remove this and do your own)
     float2 pos = this->ToPixels(cannon.position);
-    dl->AddCircle(pos, 10.f, IM_COL32_WHITE);
+    dl->AddRect(pos, { pos.x - 10.f, pos.y - 10.f }, IM_COL32_WHITE);
 }
 
 void CannonRenderer::DrawProjectileMotion(const CannonState& cannon)
 {
-    // TODO: Draw cannon projectile using ImDrawList
-    // e.g. dl->AddLine(...)
-    // e.g. dl->PathLineTo(...)
-    // etc...
+    // if (cannon.projectile.launched)
+    dl->AddCircle(this->ToPixels(cannon.projectile.position), cannon.projectile.mass, IM_COL32_WHITE);
 }
 
 CannonGame::CannonGame(CannonRenderer& renderer)
     : renderer(renderer)
 {
     cannonState.position.x = -15.f;
-    // TODO: Init cannonState here
+    cannonState.initialSpeed = 15.f,
+    cannonState.angle = TAU / 8.f;
+    cannonState.projectile = {
+        false,
+        10.f,
+        cannonState.position,
+        { 0.f, 0.f },
+        { 0.f, 0.f }
+    };
 }
 
 CannonGame::~CannonGame()
@@ -82,16 +87,53 @@ CannonGame::~CannonGame()
 
 }
 
-void CannonGame::UpdateAndDraw()
+void CannonGame::UpdateAndDraw(const float& deltaTime)
 {
+    static float t = 0.f;
+    Projectile* p = &cannonState.projectile;
+
     renderer.PreUpdate();
 
     if (ImGui::Begin("Canon state", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        // TODO: Add UI to edit other cannon state variables here
+        if (ImGui::Button("Launch") && !p->launched)
+        {
+            p->launched = true;
+            p->position = { cannonState.position.x, cannonState.position.y };
+        }
         ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
     }
     ImGui::End();
+
+    if (p->launched)
+    {
+        t += deltaTime * 0.00000001f;
+
+        // Physics computations
+        p->acceleration =
+        {
+            0.f,
+            p->mass * -GRAVITY
+        };
+
+        p->speed = 
+        {
+            cannonState.initialSpeed * cosf(cannonState.angle),
+            cannonState.initialSpeed * sinf(cannonState.angle) - p->acceleration.y * t
+        };
+
+        p->position =
+        {
+            p->speed.x * t,
+            -(GRAVITY * t * t / 2.f) + p->speed.y * t
+        };
+    }
+
+    if (p->launched && p->position.y <= renderer.worldOrigin.y)
+    {
+        p->launched = false;
+        t = 0;
+    }
 
     // Draw cannon
     renderer.DrawGround();

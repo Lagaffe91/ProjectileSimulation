@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
         glfwSwapBuffers(window);
 		timeEnd = glfwGetTime();
 		deltaTime = timeEnd - timeNow;
+        glfwSetWindowShouldClose(window, glfwGetKey(window, GLFW_KEY_ESCAPE));
     }
 
     delete app;

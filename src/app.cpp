@@ -14,5 +14,5 @@ App::~App()
 
 void App::Update(float deltaTime)
 {
-    cannonGame.UpdateAndDraw();
+    cannonGame.UpdateAndDraw(deltaTime);
 }
