@@ -6,3 +6,5 @@
 /cannon.exe
 
 .vs/
+
+*imgui.ini

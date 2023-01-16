@@ -1,6 +1,7 @@
 #pragma once
 
 #include <imgui.h>
+#include <vector>
 
 #include "types.hpp"
 
@@ -43,6 +44,8 @@ public:
     void DrawGround();
     void DrawCannon(const CannonState& cannon);
     void DrawProjectileMotion(const CannonState& cannon);
+
+    std::vector<float2> curvePoints;
 };
 
 class CannonGame
