@@ -1,8 +1,5 @@
 #include <stdio.h>
-<<<<<<< HEAD
 #include <math.h>
-=======
->>>>>>> c5589a5c6ec074e49de06f01a6fa982ffe0570f0
 #include <stb_image.h>
 #include <GLFW/glfw3.h>
 
@@ -50,7 +47,6 @@ void ImGuiUtils::UnloadTexture(Texture texture)
     glDeleteTextures(1, &tex);
 }
 
-<<<<<<< HEAD
 
 void ImGuiUtils::DrawTextureEx(Texture tex, ImVec2 pos, ImVec2 scale, float angle)
 {
@@ -89,5 +85,3 @@ void ImGuiUtils::DrawTextureEx(Texture tex, ImVec2 pos, ImVec2 scale, float angl
         IM_COL32_WHITE
     );
 }
-=======
->>>>>>> c5589a5c6ec074e49de06f01a6fa982ffe0570f0
