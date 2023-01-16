@@ -23,17 +23,10 @@ void CannonRenderer::PreUpdate()
     io = &ImGui::GetIO();
 
     // Compute world space
-    // ===================
-    // Origin:
-    //  - x at the center of the window
-    //  - y at the 3/4 bottom of the window
-    // Scale:
-    //  50 meters from left of the window to the right
-    //  Uniform scale in y except it's pointing to up
     worldOrigin.x = io->DisplaySize.x / 2.f;
     worldOrigin.y = io->DisplaySize.y - io->DisplaySize.y / 4.f;
     worldScale.x  = io->DisplaySize.x / 50.f;
-    worldScale.y  = -worldScale.x; // Same scale as X bu invert it to invert y coordinates
+    worldScale.y  = -worldScale.x;
 }
 
 float2 CannonRenderer::ToPixels(float2 coordinatesInMeters)
@@ -89,7 +82,7 @@ CannonGame::~CannonGame()
 
 void CannonGame::UpdateAndDraw(const float& deltaTime)
 {
-    static float t = 0.f;
+    static float absolute_time = 0;
     Projectile* p = &cannonState.projectile;
 
     renderer.PreUpdate();
@@ -99,15 +92,19 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
         if (ImGui::Button("Launch") && !p->launched)
         {
             p->launched = true;
-            p->position = { cannonState.position.x, cannonState.position.y };
+            absolute_time = 0;
         }
         ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
+        ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
+
+        ImGui::Text("Acceleration\n  x = %.2f  y = %.2f\nVelocity\n  x = %.2f  y = %.2f\nPosition\n  x = %.2f  y = %.2f", 
+            p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
     }
     ImGui::End();
 
     if (p->launched)
     {
-        t += deltaTime * 0.00000001f;
+        absolute_time += deltaTime;
 
         // Physics computations
         p->acceleration =
@@ -116,24 +113,21 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
             p->mass * -GRAVITY
         };
 
+        const float speed_y = cannonState.initialSpeed * sinf(cannonState.angle);
         p->speed = 
         {
             cannonState.initialSpeed * cosf(cannonState.angle),
-            cannonState.initialSpeed * sinf(cannonState.angle) - p->acceleration.y * t
+            speed_y - (p->acceleration.y * deltaTime)
         };
 
-        p->position =
+        p->position = cannonState.position + p->speed * absolute_time + (p->acceleration * absolute_time * absolute_time * 0.5);
+
+        if (p->position.y + deltaTime < 0.f)
         {
-            p->speed.x * t,
-            -(GRAVITY * t * t / 2.f) + p->speed.y * t
-        };
+            p->launched = false;
+        }
     }
-
-    if (p->launched && p->position.y <= renderer.worldOrigin.y)
-    {
-        p->launched = false;
-        t = 0;
-    }
+    
 
     // Draw cannon
     renderer.DrawGround();
