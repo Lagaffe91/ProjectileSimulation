@@ -93,41 +93,45 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
         {
             p->launched = true;
             absolute_time = 0;
+            p->position = cannonState.position;
         }
         ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
         ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
 
-        ImGui::Text("Acceleration\n  x = %.2f  y = %.2f\nVelocity\n  x = %.2f  y = %.2f\nPosition\n  x = %.2f  y = %.2f", 
-            p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
+        ImGui::Text("Acceleration\n  x = %.2f  y = %.2f\nVelocity\n  x = %.2f  y = %.2f\nPosition\n  x = %.2f  y = %.2f",
+                    p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
     }
     ImGui::End();
 
     if (p->launched)
     {
-        absolute_time += deltaTime;
-
         // Physics computations
-        p->acceleration =
+        const float c_deltaTime = 0.001666f;
+        float simulationTime = 0;
+        while (simulationTime < deltaTime)
         {
-            0.f,
-            p->mass * -GRAVITY
-        };
+            absolute_time += c_deltaTime;
+            p->acceleration =
+            {
+                0.f,
+                p->mass * -GRAVITY
+            };
 
-        const float speed_y = cannonState.initialSpeed * sinf(cannonState.angle);
-        p->speed = 
-        {
-            cannonState.initialSpeed * cosf(cannonState.angle),
-            speed_y - (p->acceleration.y * deltaTime)
-        };
-
-        p->position = cannonState.position + p->speed * absolute_time + (p->acceleration * absolute_time * absolute_time * 0.5);
-
-        if (p->position.y + deltaTime < 0.f)
-        {
-            p->launched = false;
+            const float speed_y = cannonState.initialSpeed * sinf(cannonState.angle);
+            p->speed =
+            {
+                cannonState.initialSpeed * cosf(cannonState.angle),
+                speed_y - (p->acceleration.y * deltaTime)
+            };
+            if (p->position.y <= 0.0f)
+                p->launched = false;
+            if (p->position.y > 0.0f)
+                p->position = cannonState.position + p->speed * absolute_time + (p->acceleration * absolute_time * absolute_time * 0.5);
+            simulationTime += c_deltaTime;
         }
     }
-    
+    if (absolute_time == 0)
+        p->position = cannonState.position;
 
     // Draw cannon
     renderer.DrawGround();
