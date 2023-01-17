@@ -27,7 +27,7 @@ void CannonRenderer::PreUpdate()
     worldOrigin.x = io->DisplaySize.x / 2.f;
     worldOrigin.y = io->DisplaySize.y - io->DisplaySize.y / 4.f;
     worldScale.x  = io->DisplaySize.x / 50.f;
-    worldScale.y  = -worldScale.x;
+    worldScale.y= -worldScale.x;
 }
 
 float2 CannonRenderer::ToPixels(float2 coordinatesInMeters)
@@ -54,17 +54,40 @@ void CannonRenderer::DrawCannon(const CannonState& cannon)
     dl->AddRect(pos, { pos.x - 10.f, pos.y - 10.f }, IM_COL32_WHITE);
 }
 
+
+inline float2 SimulateProjectilePos(float time, CannonState cannon)
+{
+    return {
+        time * cannon.initialSpeed * cosf(cannon.angle) + cannon.position.x,
+        -(1.f / 2.f * GRAVITY * cannon.projectile.mass * (time * time)) + cannon.initialSpeed * time * sinf(cannon.angle) + cannon.position.y
+    };
+}
+
+
 void CannonRenderer::DrawProjectileMotion(const CannonState& cannon)
 {
-    dl->AddCircle(
-        this->ToPixels(cannon.projectile.position),
-        cannon.projectile.mass * 0.25f, 
-        IM_COL32_WHITE);
+    //Get-Draw curve of projectile
+    this->curvePoints.clear();
+    for (float i = 0; i < this->curvePoints.capacity(); i++)
+    {
+        float2 point = SimulateProjectilePos(i * 0.05, cannon);
+        
+        if (point.y < -15) //Dont compute everything
+            break;
+        else 
+            this->curvePoints.push_back(this->ToPixels(point));
+    }
  
     for (size_t i = 1; i < curvePoints.size(); i++)
     {
         dl->AddLine(curvePoints[i-1], curvePoints[i], IM_COL32_WHITE);
     }
+
+    //Draw projectile itself
+    dl->AddCircle(
+        this->ToPixels(cannon.projectile.position),
+        cannon.projectile.mass * 0.25f,
+        IM_COL32_WHITE);
 }
 
 CannonGame::CannonGame(CannonRenderer& renderer)
@@ -86,18 +109,6 @@ CannonGame::CannonGame(CannonRenderer& renderer)
 CannonGame::~CannonGame()
 {
 
-}
-
-
-float2 SimulateProjectilePos(float time, CannonState cannon)
-{
-    float2 pos
-    {
-        time * cannon.initialSpeed * cosf(cannon.angle)+ cannon.position.x,
-        -(1/2 * GRAVITY * (time * time)) + cannon.initialSpeed * time * sinf(cannon.angle) + cannon.position.y //Float approximation in division be carefull !
-    };
-
-    return pos;
 }
 
 void CannonGame::UpdateAndDraw(const float& deltaTime)
@@ -129,14 +140,6 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
     }
     ImGui::End();
-
-
-    renderer.curvePoints.clear();
-    //Get curve of motion
-    for (float i = 0; i < renderer.curvePoints.capacity(); i+= renderer.curvePoints.capacity()*0.5)
-    {
-        renderer.curvePoints.push_back(renderer.ToPixels(SimulateProjectilePos(i, cannonState)));
-    }
 
     if (p->launched)
     {
