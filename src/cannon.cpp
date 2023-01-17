@@ -118,17 +118,8 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
     renderer.PreUpdate();
 
-    if (ImGui::Begin("Simulation settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::Begin("Cannon settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::SliderFloat("Displacement", &cannonState.position.x, -20.f, -10.f);
-        ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
-        ImGui::SliderFloat("Initial Speed", &cannonState.initialSpeed, 0.f, 99.f);
-        ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
-        ImGui::SliderFloat("Mass", &cannonState.projectile.mass, 0.f, 100.f);
-
-        ImGui::Text("Acceleration (x = %.2f, y = %.2f)\nVelocity (x = %.2f, y = %.2f)\nPosition (x = %.2f, y = %.2f)",
-                    p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
-        
         if (ImGui::Button(p->launched ? "Simulating" : "Launch") && !p->launched)
         {
             p->launched = true;
@@ -138,6 +129,17 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
             renderer.curvePoints.clear();
         }
 
+        if (!p->launched)
+        {
+            ImGui::SliderFloat("Displacement", &cannonState.position.x, -20.f, -10.f);
+            ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
+            ImGui::SliderFloat("Initial Speed", &cannonState.initialSpeed, 0.f, 99.f);
+            ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
+            ImGui::SliderFloat("Mass", &cannonState.projectile.mass, 0.f, 100.f);
+        }
+
+        ImGui::Text("\nProjectile State :\n  Acceleration (x = %.2f, y = %.2f)\n  Velocity (x = %.2f, y = %.2f)\n  Position (x = %.2f, y = %.2f)",
+                    p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
     }
     ImGui::End();
 
