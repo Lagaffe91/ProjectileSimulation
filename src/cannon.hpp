@@ -12,16 +12,13 @@ struct Projectile
     float2 position, speed, acceleration;
 };
 
-struct CannonState
+struct Cannon
 {
     float2 position;
-    float angle; // In radians
-    float initialSpeed;
+    float angle, v0, L;
     Projectile projectile;
 };
 
-// Renderer class
-// Used to load resources
 class CannonRenderer
 {
 public:
@@ -30,7 +27,6 @@ public:
 
     void PreUpdate();
 
-    // Fast access to drawlist and io
     ImDrawList* dl;
     ImGuiIO* io;
 
@@ -40,10 +36,9 @@ public:
     float2 ToPixels(float2 coordinatesInMeters);
     float2 ToWorld(float2 coordinatesInPixels);
 
-    // Draw functions
     void DrawGround();
-    void DrawCannon(const CannonState& cannon);
-    void DrawProjectileMotion(const CannonState& cannon);
+    void DrawCannon(const Cannon& cannon);
+    void DrawProjectileMotion(const Cannon& cannon);
 
     std::vector<float2> curvePoints;
 };
@@ -58,5 +53,5 @@ public:
 
 private:
     CannonRenderer& renderer;
-    CannonState cannonState;
+    Cannon cannon;
 };

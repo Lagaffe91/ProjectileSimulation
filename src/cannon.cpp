@@ -5,11 +5,11 @@
 #include "cannon.hpp"
 #include "types.hpp"
 
+#define N_CURVE_POINTS 20
+
 CannonRenderer::CannonRenderer()
 {
-    constexpr int vectorDefSize = 20;
-
-    curvePoints.reserve(vectorDefSize);
+    curvePoints.reserve(N_CURVE_POINTS);
 }
 
 CannonRenderer::~CannonRenderer()
@@ -42,29 +42,50 @@ float2 CannonRenderer::ToWorld(float2 coordinatesInPixels)
 
 void CannonRenderer::DrawGround()
 {
-    float2 left  = this->ToPixels({ -100.f, 0.f });
-    float2 right = this->ToPixels({ +100.f, 0.f });
+    float2 left  = this->ToPixels({ -100.f, -0.5f });
+    float2 right = this->ToPixels({ +100.f, -0.5f });
 
     dl->AddLine(left, right, IM_COL32_WHITE);
 }
 
-void CannonRenderer::DrawCannon(const CannonState& cannon)
+inline void RotateAround(const float2& origin, float2& point, const float angle)
+{
+    point = point - origin;
+    float2 n_point = {
+        point.x * cosf(angle) - point.y * sinf(angle),
+        point.x * sinf(angle) + point.y * cosf(angle)
+    };
+    point = n_point + origin;
+}
+
+void CannonRenderer::DrawCannon(const Cannon& cannon)
 {   
-    float2 pos = this->ToPixels(cannon.position);
-    dl->AddRect(pos, { pos.x - 10.f, pos.y - 10.f }, IM_COL32_WHITE);
+    float2 o = cannon.position;
+    const float hH = 0.5f;
+    const float hW  = cannon.L / 4.f;
+    
+    float2 p1 =  this->ToPixels({o.x + hW, o.y + hH});
+    float2 p2 =  this->ToPixels({o.x - hW, o.y + hH});
+    float2 p3 =  this->ToPixels({o.x - hW, o.y - hH});
+    float2 p4 =  this->ToPixels({o.x + hW, o.y - hH});
+
+    float2 p[4] = { p1, p2, p3, p4 };
+    for (int i = 0; i < 4; i++)
+        RotateAround(this->ToPixels({o.x - hW, o.y}), p[i], -cannon.angle);
+    
+    dl->AddQuad(p[0], p[1], p[2], p[3], IM_COL32_WHITE);
 }
 
 
-inline float2 SimulateProjectilePos(float time, CannonState cannon)
+inline float2 SimulateProjectilePos(float time, const Cannon& cannon)
 {
     return {
-        time * cannon.initialSpeed * cosf(cannon.angle) + cannon.position.x,
-        -(1.f / 2.f * GRAVITY * cannon.projectile.mass * (time * time)) + cannon.initialSpeed * time * sinf(cannon.angle) + cannon.position.y
+        time * cannon.v0 * cosf(cannon.angle) + cannon.position.x,
+        -(1.f / 2.f * GRAVITY * cannon.projectile.mass * time * time) + cannon.v0 * time * sinf(cannon.angle) + cannon.position.y
     };
 }
 
-
-void CannonRenderer::DrawProjectileMotion(const CannonState& cannon)
+void CannonRenderer::DrawProjectileMotion(const Cannon& cannon)
 {
     //Get-Draw curve of projectile
     this->curvePoints.clear();
@@ -85,22 +106,21 @@ void CannonRenderer::DrawProjectileMotion(const CannonState& cannon)
 
     //Draw projectile itself
     dl->AddCircle(
-        this->ToPixels(cannon.projectile.position),
-        cannon.projectile.mass * 0.25f,
-        IM_COL32_WHITE);
+        this->ToPixels(cannon.projectile.position), 10.f, IM_COL32_WHITE);
 }
 
 CannonGame::CannonGame(CannonRenderer& renderer)
     : renderer(renderer)
 {
-    cannonState.position.x = -15.f;
-    cannonState.position.y = 10.f;
-    cannonState.initialSpeed = 15.f,
-    cannonState.angle = TAU / 8.f;
-    cannonState.projectile = {
+    cannon.position.x = -15.f;
+    cannon.position.y = 10.f;
+    cannon.angle = TAU / 8.f;
+    cannon.L = 10.f;
+    cannon.v0 = 15.f,
+    cannon.projectile = {
         false,
         30.f,
-        cannonState.position,
+        cannon.position,
         { 0.f, 0.f },
         { 0.f, 0.f }
     };
@@ -115,7 +135,8 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 {
     static float absolute_time = 0.f;
     static float timeScale = 1.f;
-    Projectile* p = &cannonState.projectile;
+
+    Projectile* p = &cannon.projectile;
 
     renderer.PreUpdate();
 
@@ -125,7 +146,7 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
         {
             p->launched = true;
             absolute_time = 0;
-            p->position = cannonState.position;
+            p->position = cannon.position;
 
             renderer.curvePoints.clear();
         }
@@ -136,11 +157,12 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
         if (!p->launched)
         {
-            ImGui::SliderFloat("Displacement", &cannonState.position.x, -20.f, -10.f);
-            ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
-            ImGui::SliderFloat("Initial Speed", &cannonState.initialSpeed, 0.f, 99.f);
-            ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
-            ImGui::SliderFloat("Mass", &cannonState.projectile.mass, 0.f, 100.f);
+            ImGui::SliderFloat("Displacement", &cannon.position.x, -20.f, -10.f);
+            ImGui::SliderFloat("Initial Speed", &cannon.v0, 0.f, 99.f);
+            ImGui::SliderFloat("Angle", &cannon.angle, 0.f, TAU / 2.f);
+            ImGui::SliderFloat("Mass", &cannon.projectile.mass, 10.f, 100.f);
+            ImGui::SliderFloat("Cannon Lenght", &cannon.L, 5.f, 15.f);
+            ImGui::SliderFloat("Cannon Height", &cannon.position.y, 0.f, 15.f);
         }
 
         ImGui::Text("\nProjectile State :\n  Acceleration (x = %.2f, y = %.2f)\n  Velocity (x = %.2f, y = %.2f)\n  Position (x = %.2f, y = %.2f)",
@@ -161,21 +183,21 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
             p->speed =
             {
-                cannonState.initialSpeed * cosf(cannonState.angle),
-                cannonState.initialSpeed * sinf(cannonState.angle) - (p->acceleration.y * c_deltaTime)
+                cannon.v0 * cosf(cannon.angle),
+                cannon.v0 * sinf(cannon.angle) - (p->acceleration.y * c_deltaTime)
             };
 
             if (p->position.y <= 0.f)
                 p->launched = false;
             else
-                p->position = cannonState.position + p->speed * absolute_time + (p->acceleration * absolute_time * absolute_time * 0.5);
+                p->position = cannon.position + p->speed * absolute_time + (p->acceleration * absolute_time * absolute_time * 0.5);
 
             simulationTime += c_deltaTime;
         }
     }
 
     renderer.DrawGround();
-    renderer.DrawCannon(cannonState);
-    renderer.DrawProjectileMotion(cannonState);
+    renderer.DrawCannon(cannon);
+    renderer.DrawProjectileMotion(cannon);
 }
 
