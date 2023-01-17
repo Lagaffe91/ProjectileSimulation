@@ -113,7 +113,8 @@ CannonGame::~CannonGame()
 
 void CannonGame::UpdateAndDraw(const float& deltaTime)
 {
-    static float absolute_time = 0;
+    static float absolute_time = 0.f;
+    static float timeScale = 1.f;
     Projectile* p = &cannonState.projectile;
 
     renderer.PreUpdate();
@@ -128,6 +129,10 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
             renderer.curvePoints.clear();
         }
+
+        ImGui::NewLine();
+        ImGui::SliderFloat("Time Scale", &timeScale, 0.f, 2.f);
+        ImGui::NewLine();
 
         if (!p->launched)
         {
@@ -150,7 +155,7 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
         while (simulationTime < deltaTime)
         {
-            absolute_time += c_deltaTime;
+            absolute_time += c_deltaTime * timeScale;
 
             p->acceleration = { 0.f, p->mass * -GRAVITY };
 
