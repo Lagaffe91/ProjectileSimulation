@@ -10,6 +10,13 @@ CannonRenderer::CannonRenderer()
     constexpr int vectorDefSize = 20;
 
     curvePoints.reserve(vectorDefSize);
+
+    //To fix few warnings
+    this->io = nullptr;
+    this->dl = nullptr;
+
+    this->worldOrigin = {};
+    this->worldScale = {};
 }
 
 CannonRenderer::~CannonRenderer()
