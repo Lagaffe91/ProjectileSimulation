@@ -111,6 +111,7 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
     {
         ImGui::SliderFloat("Displacement", &cannonState.position.x, -20.f, -10.f);
         ImGui::SliderFloat("Height", &cannonState.position.y, 0.f, 15.f);
+        ImGui::SliderFloat("Initial Speed", &cannonState.initialSpeed, 0.f, 99.f);
         ImGui::SliderFloat("Angle", &cannonState.angle, 0.f, TAU / 2.f);
         ImGui::SliderFloat("Mass", &cannonState.projectile.mass, 0.f, 100.f);
 
