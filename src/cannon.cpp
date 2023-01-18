@@ -5,7 +5,7 @@
 #include "cannon.hpp"
 #include "types.hpp"
 
-#define N_CURVE_POINTS 20
+#define N_CURVE_POINTS 10000
 
 CannonRenderer::CannonRenderer()
 {
@@ -88,9 +88,10 @@ void CannonRenderer::DrawProjectileMotion(const Cannon& cannon)
 {
     //Get-Draw curve of projectile
     this->curvePoints.clear();
-    for (float i = 0; i < this->curvePoints.capacity(); i++)
+	float2 point = {1, 1};
+    for (float i = 0; i < this->curvePoints.capacity() && point.y > 0; i++)
     {
-        float2 point = SimulateProjectilePos(i * 0.05, cannon);
+		point = SimulateProjectilePos(((float)i / (float)this->curvePoints.capacity()), cannon);
         
         if (point.y < -15) //Dont compute everything
             break;
