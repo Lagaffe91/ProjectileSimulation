@@ -60,18 +60,17 @@ inline void RotateAround(const float2& origin, float2& point, const float angle)
 
 void CannonRenderer::DrawCannon(const Cannon& cannon)
 {   
-    float2 o = cannon.position;
-    const float hH = 0.5f;
-    const float hW  = cannon.L / 4.f;
+	float2 o = cannon.position;
+	const float hW  = cannon.L / 2.f;
+	const float hH = 0.5f;
+	float2 p1 =  this->ToPixels({o.x + hW, o.y + hH});
+	float2 p2 =  this->ToPixels({o.x     , o.y + hH});
+	float2 p3 =  this->ToPixels({o.x     , o.y - hH});
+	float2 p4 =  this->ToPixels({o.x + hW, o.y - hH});
     
-    float2 p1 =  this->ToPixels({o.x + hW, o.y + hH});
-    float2 p2 =  this->ToPixels({o.x - hW, o.y + hH});
-    float2 p3 =  this->ToPixels({o.x - hW, o.y - hH});
-    float2 p4 =  this->ToPixels({o.x + hW, o.y - hH});
-
     float2 p[4] = { p1, p2, p3, p4 };
     for (int i = 0; i < 4; i++)
-        RotateAround(this->ToPixels({o.x - hW, o.y}), p[i], -cannon.angle);
+		RotateAround(this->ToPixels(o), p[i], -cannon.angle);
     
     dl->AddQuad(p[0], p[1], p[2], p[3], IM_COL32_WHITE);
 }
