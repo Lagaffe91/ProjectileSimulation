@@ -61,7 +61,7 @@ inline void RotateAround(const float2& origin, float2& point, const float angle)
 void CannonRenderer::DrawCannon(const Cannon& cannon)
 {   
 	float2 o = cannon.position;
-	const float hW  = cannon.L / 2.f;
+	const float hW  = cannon.L;
 	const float hH = 0.5f;
 	float2 p1 =  this->ToPixels({o.x + hW, o.y + hH});
 	float2 p2 =  this->ToPixels({o.x     , o.y + hH});
@@ -75,7 +75,7 @@ void CannonRenderer::DrawCannon(const Cannon& cannon)
     dl->AddQuad(p[0], p[1], p[2], p[3], IM_COL32_WHITE);
 }
 
-
+/* 
 inline float2 SimulateProjectilePos(float time, const Cannon& cannon)
 {
     return {
@@ -83,22 +83,51 @@ inline float2 SimulateProjectilePos(float time, const Cannon& cannon)
         -(1.f / 2.f * GRAVITY * cannon.projectile.mass * time * time) + cannon.v0 * time * sinf(cannon.angle) + cannon.position.y
     };
 }
+*/
 
-void CannonRenderer::DrawProjectileMotion(const Cannon& cannon)
+inline float2 SimulateProjectilePos(float time, const Cannon& cannon, float2 p0, float deltaTime, float2 acceleration)
 {
-    //Get-Draw curve of projectile
-    this->curvePoints.clear();
-	float2 point = {1, 1};
-    for (float i = 0; i < this->curvePoints.capacity() && point.y > 0; i++)
+    float2 position = {};
+    float2 speed =
     {
-		point = SimulateProjectilePos(((float)i / (float)this->curvePoints.capacity()), cannon);
-        
-        if (point.y < -15) //Dont compute everything
-            break;
-        else 
-            this->curvePoints.push_back(this->ToPixels(point));
-    }
+        cannon.v0 * cosf(cannon.angle),
+        cannon.v0 * sinf(cannon.angle) - (acceleration.y * deltaTime)
+    };
+    position = p0 + speed * time + (acceleration * time * time * 0.5f);
+    return (position);
+}
  
+void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
+{
+    this->curvePoints.clear();
+    //Get-Draw curve of projectile
+    float2 point = cannon.position;
+    int a = 0;
+    float2 prevPos = point;
+    float time = 0;
+    float dTime = (float)1 / (float)this->curvePoints.capacity();
+    float prevTime = 0;
+    if (point.y > 0)
+    {
+        for (float i = 0; i < this->curvePoints.capacity(); i++)
+        {
+            time += dTime;
+            float2 acceleration = { 0.f, cannon.projectile.mass * -GRAVITY };
+            if (length(cannon.position - point) < cannon.L)
+            {
+                point = SimulateProjectilePos(time, cannon, cannon.position, 0.001666f, { 0 , 0 });
+                prevPos = point;
+                prevTime = time;
+            }
+            else
+                point = SimulateProjectilePos(time - prevTime, cannon, prevPos, 0.001666f, acceleration);
+            if (point.y < -0.5f) //Dont compute everything
+                break;
+            else
+                this->curvePoints.push_back(this->ToPixels(point));
+            a = (int)i;
+        }
+    }
     for (size_t i = 1; i < curvePoints.size(); i++)
     {
         dl->AddLine(curvePoints[i-1], curvePoints[i], IM_COL32_WHITE);
@@ -116,7 +145,7 @@ CannonGame::CannonGame(CannonRenderer& renderer)
     cannon.position.y = 10.f;
     cannon.angle = TAU / 8.f;
     cannon.L = 10.f;
-    cannon.v0 = 15.f,
+    cannon.v0 = 99.f,
     cannon.projectile = {
         false,
         30.f,
@@ -133,9 +162,9 @@ CannonGame::~CannonGame()
 
 void CannonGame::UpdateAndDraw(const float& deltaTime)
 {
-    static float absolute_time = 0.f;
+    static float absolute_time;
     static float timeScale = 1.f;
-
+    bool update = false;
     Projectile* p = &cannon.projectile;
 
     renderer.PreUpdate();
@@ -144,6 +173,7 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
     {
         if (ImGui::Button(p->launched ? "Simulating" : "Launch") && !p->launched)
         {
+            update = true;
             p->launched = true;
             absolute_time = 0;
             p->position = cannon.position;
@@ -157,47 +187,52 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
         if (!p->launched)
         {
-            ImGui::SliderFloat("Displacement", &cannon.position.x, -20.f, -10.f);
-            ImGui::SliderFloat("Initial Speed", &cannon.v0, 0.f, 99.f);
-            ImGui::SliderFloat("Angle", &cannon.angle, 0.f, TAU / 2.f);
-            ImGui::SliderFloat("Mass", &cannon.projectile.mass, 10.f, 100.f);
-            ImGui::SliderFloat("Cannon Lenght", &cannon.L, 5.f, 15.f);
-            ImGui::SliderFloat("Cannon Height", &cannon.position.y, 0.f, 15.f);
+            update |= ImGui::SliderFloat("Displacement", &cannon.position.x, -20.f, -10.f);
+            update |= ImGui::SliderFloat("Initial Speed", &cannon.v0, 0.f, 99.f);
+            update |= ImGui::SliderFloat("Angle", &cannon.angle, 0.f, TAU / 2.f);
+            update |= ImGui::SliderFloat("Mass", &cannon.projectile.mass, 10.f, 100.f);
+            update |= ImGui::SliderFloat("Cannon Lenght", &cannon.L, 5.f, 15.f);
+            update |= ImGui::SliderFloat("Cannon Height", &cannon.position.y, 0.f, 15.f);
         }
 
-        ImGui::Text("\nProjectile State :\n  Acceleration (x = %.2f, y = %.2f)\n  Velocity (x = %.2f, y = %.2f)\n  Position (x = %.2f, y = %.2f)",
-                    p->acceleration.x, p->acceleration.y, p->speed.x, p->speed.y, p->position.x, p->position.y);
+        ImGui::Text("\nProjectile State :\n  Acceleration :\nx = %.2f\ny = %.2f\n  Velocity :\nx = %.2f      %.2f m/s\ny = %.2f\n  Position (x = %.2f, y = %.2f)",
+                    p->acceleration.x, p->acceleration.y, p->dSpeed.x, p->speedMagnitude, p->dSpeed.y, p->position.x, p->position.y);
     }
     ImGui::End();
 
     if (p->launched)
     {
-        const float c_deltaTime = 0.001666f;
+        const float c_deltaTime = (deltaTime * timeScale);
         float simulationTime = 0;
 
+        float2 prevPosition = p->position;
+        float2 lastPosition = cannon.position;
+        static float prevTime;
+        p->acceleration = { 0.f, p->mass * -GRAVITY };
         while (simulationTime < deltaTime)
         {
             absolute_time += c_deltaTime * timeScale;
-
-            p->acceleration = { 0.f, p->mass * -GRAVITY };
-
-            p->speed =
+            if (length(cannon.position - p->position) < cannon.L)
             {
-                cannon.v0 * cosf(cannon.angle),
-                cannon.v0 * sinf(cannon.angle) - (p->acceleration.y * c_deltaTime)
-            };
-
-            if (p->position.y <= 0.f)
-                p->launched = false;
+                p->position  = SimulateProjectilePos(absolute_time, cannon, cannon.position, c_deltaTime * timeScale, { 0, 0 });
+                lastPosition = p->position;
+                prevTime     = absolute_time;
+            }
             else
-                p->position = cannon.position + p->speed * absolute_time + (p->acceleration * absolute_time * absolute_time * 0.5);
-
+                p->position = SimulateProjectilePos(absolute_time - prevTime, cannon, lastPosition, c_deltaTime * timeScale, p->acceleration);
+            if (p->position.y < -0.5)
+            {
+                p->launched = false;
+                prevTime = 0;
+                break;
+            }
             simulationTime += c_deltaTime;
         }
+        p->dSpeed = p->position - prevPosition;
+        p->speedMagnitude = length(p->dSpeed);
     }
 
     renderer.DrawGround();
     renderer.DrawCannon(cannon);
-    renderer.DrawProjectileMotion(cannon);
+    renderer.DrawProjectileMotion(cannon, update);
 }
-

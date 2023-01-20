@@ -9,7 +9,8 @@ struct Projectile
 {
     bool launched;
     float mass;
-    float2 position, speed, acceleration;
+    float2 position, speed, acceleration, dSpeed;
+    float speedMagnitude;
 };
 
 struct Cannon
@@ -38,7 +39,7 @@ public:
 
     void DrawGround();
     void DrawCannon(const Cannon& cannon);
-    void DrawProjectileMotion(const Cannon& cannon);
+    void DrawProjectileMotion(const Cannon& cannon, bool update);
 
     std::vector<float2> curvePoints;
 };

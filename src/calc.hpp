@@ -17,4 +17,5 @@ static inline float2& operator+=(float2& a, float2 b) { a = a + b; return a; }
 static inline float2& operator*=(float2& a, float2 b) { a = a * b; return a; }
 static inline float2& operator/=(float2& a, float2 b) { a = a / b; return a; }
 
+static inline float length(float2 vec) { return sqrtf(vec.x * vec.x + vec.y * vec.y); }
 static inline float sign(float x) { return (x < 0.f) ? -1.f : 1.f; }
