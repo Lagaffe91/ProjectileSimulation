@@ -5,7 +5,7 @@
 #include "cannon.hpp"
 #include "types.hpp"
 
-#define N_CURVE_POINTS 10000
+#define N_CURVE_POINTS 1000
 
 CannonRenderer::CannonRenderer()
 {
@@ -103,7 +103,7 @@ void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
     //Get-Draw curve of projectile
     float2 point = cannon.position;
     int a = 0;
-    float2 prevPos = point;
+    static float2 prevPos = point;
     float time = 0;
     float dTime = (float)1 / (float)this->curvePoints.capacity();
     float prevTime = 0;
@@ -115,12 +115,12 @@ void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
             float2 acceleration = { 0.f, cannon.projectile.mass * -GRAVITY };
             if (length(cannon.position - point) < cannon.L)
             {
-                point = SimulateProjectilePos(time, cannon, cannon.position, 0.001666f, { 0 , 0 });
+                point = SimulateProjectilePos(time, cannon, cannon.position, dTime, { 0 , 0 });
                 prevPos = point;
                 prevTime = time;
             }
             else
-                point = SimulateProjectilePos(time - prevTime, cannon, prevPos, 0.001666f, acceleration);
+                point = SimulateProjectilePos(time - prevTime, cannon, prevPos, dTime, acceleration);
             if (point.y < -0.5f) //Dont compute everything
                 break;
             else
@@ -206,7 +206,7 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
         float simulationTime = 0;
 
         float2 prevPosition = p->position;
-        float2 lastPosition = cannon.position;
+        static float2 lastPosition = cannon.position;
         static float prevTime;
         p->acceleration = { 0.f, p->mass * -GRAVITY };
         while (simulationTime < deltaTime)
