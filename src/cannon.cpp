@@ -75,16 +75,6 @@ void CannonRenderer::DrawCannon(const Cannon& cannon)
     dl->AddQuad(p[0], p[1], p[2], p[3], IM_COL32_WHITE);
 }
 
-/* 
-inline float2 SimulateProjectilePos(float time, const Cannon& cannon)
-{
-    return {
-        time * cannon.v0 * cosf(cannon.angle) + cannon.position.x,
-        -(1.f / 2.f * GRAVITY * cannon.projectile.mass * time * time) + cannon.v0 * time * sinf(cannon.angle) + cannon.position.y
-    };
-}
-*/
-
 inline float2 SimulateProjectilePos(float time, const Cannon& cannon, float2 p0, bool applyGravity)
 {
     float2 acceleration = { 0.f, cannon.projectile.mass * -GRAVITY };
@@ -104,19 +94,18 @@ inline float2 SimulateProjectilePos(float time, const Cannon& cannon, float2 p0,
 void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
 {
     this->curvePoints.clear();
-    //Get-Draw curve of projectile
     float2 point = cannon.position;
-    int a = 0;
     static float2 prevPos = point;
     float time = 0;
     float dTime = (float)1 / (float)this->curvePoints.capacity();
     float prevTime = 0;
     if (point.y > 0)
     {
-        for (float i = 0; i < this->curvePoints.capacity(); i++)
+        for (size_t i = 0; i < this->curvePoints.capacity(); i++)
         {
             time += dTime;
-            if (length(cannon.position - point) < cannon.L)
+            float cannonLenght = cosf(cannon.angle) * cannon.L;
+            if (point.x - cannon.position.x < cannonLenght)
             {
                 point = SimulateProjectilePos(time, cannon, cannon.position, false);
                 prevPos = point;
@@ -128,7 +117,6 @@ void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
                 break;
             else
                 this->curvePoints.push_back(this->ToPixels(point));
-            a = (int)i;
         }
     }
     for (size_t i = 1; i < curvePoints.size(); i++)
@@ -145,22 +133,11 @@ CannonGame::CannonGame(CannonRenderer& renderer)
     : renderer(renderer)
 {
     cannon.position.x = -15.f;
-    cannon.position.y = 10.f;
+    cannon.position.y = 1.f;
     cannon.angle = TAU / 8.f;
-    cannon.L = 10.f;
-    cannon.v0 = 99.f,
-    cannon.projectile = {
-        false,
-        30.f,
-        cannon.position,
-        { 0.f, 0.f },
-        { 0.f, 0.f }
-    };
-}
-
-CannonGame::~CannonGame()
-{
-
+    cannon.L = 5.f;
+    cannon.v0 = 50.f,
+    cannon.projectile = { false, 30.f, cannon.position, { 0.f, 0.f }, { 0.f, 0.f } };
 }
 
 void CannonGame::UpdateAndDraw(const float& deltaTime)
@@ -192,13 +169,13 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
         {
             update |= ImGui::SliderFloat("Displacement", &cannon.position.x, -20.f, -10.f);
             update |= ImGui::SliderFloat("Initial Speed", &cannon.v0, 0.f, 99.f);
-            update |= ImGui::SliderFloat("Angle", &cannon.angle, 0.f, TAU / 2.f);
+            update |= ImGui::SliderFloat("Angle", &cannon.angle, 0.f, TAU / 4.f);
             update |= ImGui::SliderFloat("Mass", &cannon.projectile.mass, 10.f, 100.f);
-            update |= ImGui::SliderFloat("Cannon Lenght", &cannon.L, 5.f, 15.f);
-            update |= ImGui::SliderFloat("Cannon Height", &cannon.position.y, 0.f, 15.f);
+            update |= ImGui::SliderFloat("Cannon Lenght", &cannon.L, 5.f, 10.f);
+            update |= ImGui::SliderFloat("Cannon Height", &cannon.position.y, 1.f, 10.f);
         }
 
-        ImGui::Text("\nProjectile State :\n  Acceleration :\nx = %.2f\ny = %.2f\n  Velocity :\nx = %.2f      %.2f m/s\ny = %.2f\n  Position (x = %.2f, y = %.2f)",
+        ImGui::Text("Acceleration: x = %.2f y = %.2f\nVelocity:x = %.2f y = %.2f (%.2f m/s)\nPosition: x = %.2f y = %.2f",
                     p->acceleration.x, p->acceleration.y, p->dSpeed.x, p->speedMagnitude, p->dSpeed.y, p->position.x, p->position.y);
     }
     ImGui::End();
@@ -214,7 +191,9 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
         p->acceleration = { 0.f, p->mass * -GRAVITY };
         while (simulationTime < deltaTime * timeScale)
         {
-            if (length(cannon.position - p->position) < cannon.L)
+            float cannonLenght = cosf(cannon.angle) * cannon.L;
+            if (p->position.x - cannon.position.x < cannonLenght)
+            //if (length(cannon.position - p->position) < cannon.L)
             {
                 p->position  = SimulateProjectilePos(absolute_time, cannon, cannon.position, false);
                 lastPosition = p->position;

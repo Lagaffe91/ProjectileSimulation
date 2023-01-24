@@ -48,7 +48,7 @@ class CannonGame
 {
 public:
     CannonGame(CannonRenderer& renderer);
-    ~CannonGame();
+    ~CannonGame() = default;
 
     void UpdateAndDraw(const float& deltaTime);
 
