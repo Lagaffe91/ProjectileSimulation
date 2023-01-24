@@ -85,15 +85,19 @@ inline float2 SimulateProjectilePos(float time, const Cannon& cannon)
 }
 */
 
-inline float2 SimulateProjectilePos(float time, const Cannon& cannon, float2 p0, float deltaTime, float2 acceleration)
+inline float2 SimulateProjectilePos(float time, const Cannon& cannon, float2 p0, bool applyGravity)
 {
+    float2 acceleration = { 0.f, cannon.projectile.mass * -GRAVITY };
     float2 position = {};
     float2 speed =
     {
         cannon.v0 * cosf(cannon.angle),
-        cannon.v0 * sinf(cannon.angle) - (acceleration.y * deltaTime)
+        cannon.v0 * sinf(cannon.angle)
     };
-    position = p0 + speed * time + (acceleration * time * time * 0.5f);
+    if (applyGravity)
+        position = p0 + speed * time + (acceleration * time * time * 0.5f);
+    else
+        position = p0 + speed * time;
     return (position);
 }
  
@@ -112,15 +116,14 @@ void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
         for (float i = 0; i < this->curvePoints.capacity(); i++)
         {
             time += dTime;
-            float2 acceleration = { 0.f, cannon.projectile.mass * -GRAVITY };
             if (length(cannon.position - point) < cannon.L)
             {
-                point = SimulateProjectilePos(time, cannon, cannon.position, dTime, { 0 , 0 });
+                point = SimulateProjectilePos(time, cannon, cannon.position, false);
                 prevPos = point;
                 prevTime = time;
             }
             else
-                point = SimulateProjectilePos(time - prevTime, cannon, prevPos, dTime, acceleration);
+                point = SimulateProjectilePos(time - prevTime, cannon, prevPos, true);
             if (point.y < -0.5f) //Dont compute everything
                 break;
             else
@@ -202,24 +205,23 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
 
     if (p->launched)
     {
-        const float c_deltaTime = (deltaTime * timeScale);
+        float c_deltaTime = 0.00001f;
         float simulationTime = 0;
 
         float2 prevPosition = p->position;
         static float2 lastPosition = cannon.position;
         static float prevTime;
         p->acceleration = { 0.f, p->mass * -GRAVITY };
-        while (simulationTime < deltaTime)
+        while (simulationTime < deltaTime * timeScale)
         {
-            absolute_time += c_deltaTime * timeScale;
             if (length(cannon.position - p->position) < cannon.L)
             {
-                p->position  = SimulateProjectilePos(absolute_time, cannon, cannon.position, c_deltaTime * timeScale, { 0, 0 });
+                p->position  = SimulateProjectilePos(absolute_time, cannon, cannon.position, false);
                 lastPosition = p->position;
                 prevTime     = absolute_time;
             }
             else
-                p->position = SimulateProjectilePos(absolute_time - prevTime, cannon, lastPosition, c_deltaTime * timeScale, p->acceleration);
+                p->position = SimulateProjectilePos(absolute_time - prevTime, cannon, lastPosition, true);
             if (p->position.y < -0.5)
             {
                 p->launched = false;
@@ -228,6 +230,7 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
             }
             simulationTime += c_deltaTime;
         }
+        absolute_time += deltaTime * timeScale;
         p->dSpeed = p->position - prevPosition;
         p->speedMagnitude = length(p->dSpeed);
     }
