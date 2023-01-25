@@ -41,7 +41,11 @@ public:
     void DrawCannon(const Cannon& cannon);
     void DrawProjectileMotion(const Cannon& cannon, bool update);
 
+    bool DrawImgui(Cannon& cannon);
+
     std::vector<float2> curvePoints;
+
+    float timeScale = 1.f;
 };
 
 class CannonGame

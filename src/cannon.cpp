@@ -142,6 +142,44 @@ void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
         this->ToPixels(cannon.projectile.position), 10.f, IM_COL32_WHITE);
 }
 
+bool CannonRenderer::DrawImgui(Cannon& cannon)
+{
+    bool updated = false;
+
+    if (ImGui::Begin("Cannon settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        if (ImGui::Button(cannon.projectile.launched ? "Simulating" : "Launch") && !cannon.projectile.launched)
+        {
+            updated = true;
+            cannon.projectile.launched = true;
+            cannon.projectile.position = cannon.position;
+
+            this->curvePoints.clear();
+        }
+
+        ImGui::NewLine();
+        ImGui::SliderFloat("Time Scale", &timeScale, 0.f, 2.f);
+        ImGui::NewLine();
+
+        if (!cannon.projectile.launched)
+        {
+            updated |= ImGui::SliderFloat("Displacement", &cannon.position.x, -20.f, -10.f);
+            updated |= ImGui::SliderFloat("Initial Speed", &cannon.v0, 0.f, 99.f);
+            updated |= ImGui::SliderFloat("Angle", &cannon.angle, 0.f, TAU / 4.f);
+            updated |= ImGui::SliderFloat("Mass", &cannon.projectile.mass, 10.f, 100.f);
+            updated |= ImGui::SliderFloat("Cannon Lenght", &cannon.L, 5.f, 10.f);
+            updated |= ImGui::SliderFloat("Cannon Height", &cannon.position.y, 1.f, 10.f);
+        }
+
+        ImGui::Text("Acceleration: x = %.2f y = %.2f\nVelocity:x = %.2f y = %.2f (%.2f m/s)\nPosition: x = %.2f y = %.2f",
+            cannon.projectile.acceleration.x, cannon.projectile.acceleration.y, cannon.projectile.dSpeed.x, cannon.projectile.speedMagnitude, cannon.projectile.dSpeed.y, cannon.projectile.position.x, cannon.projectile.position.y);
+    }
+
+    ImGui::End();
+
+    return updated;
+}
+
 CannonGame::CannonGame(CannonRenderer& renderer)
     : renderer(renderer)
 {
@@ -157,42 +195,12 @@ CannonGame::CannonGame(CannonRenderer& renderer)
 void CannonGame::UpdateAndDraw(const float& deltaTime)
 {
     static float absolute_time;
-    static float timeScale = 1.f;
-    bool update = false;
+    
     Projectile* p = &cannon.projectile;
 
     renderer.PreUpdate();
 
-    if (ImGui::Begin("Cannon settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-    {
-        if (ImGui::Button(p->launched ? "Simulating" : "Launch") && !p->launched)
-        {
-            update = true;
-            p->launched = true;
-            absolute_time = 0;
-            p->position = cannon.position;
-
-            renderer.curvePoints.clear();
-        }
-
-        ImGui::NewLine();
-        ImGui::SliderFloat("Time Scale", &timeScale, 0.f, 2.f);
-        ImGui::NewLine();
-
-        if (!p->launched)
-        {
-            update |= ImGui::SliderFloat("Displacement", &cannon.position.x, -20.f, -10.f);
-            update |= ImGui::SliderFloat("Initial Speed", &cannon.v0, 0.f, 99.f);
-            update |= ImGui::SliderFloat("Angle", &cannon.angle, 0.f, TAU / 4.f);
-            update |= ImGui::SliderFloat("Mass", &cannon.projectile.mass, 10.f, 100.f);
-            update |= ImGui::SliderFloat("Cannon Lenght", &cannon.L, 5.f, 10.f);
-            update |= ImGui::SliderFloat("Cannon Height", &cannon.position.y, 1.f, 10.f);
-        }
-
-        ImGui::Text("Acceleration: x = %.2f y = %.2f\nVelocity:x = %.2f y = %.2f (%.2f m/s)\nPosition: x = %.2f y = %.2f",
-                    p->acceleration.x, p->acceleration.y, p->dSpeed.x, p->speedMagnitude, p->dSpeed.y, p->position.x, p->position.y);
-    }
-    ImGui::End();
+    bool parametersUpdated = renderer.DrawImgui(cannon);
 
     if (p->launched)
     {
@@ -206,7 +214,7 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
         };
         float2 prevPosition = p->position;
         float exitSpeed = sqrtf(2 * -length(p->acceleration) * cannon.L + cannon.v0 * cannon.v0);
-        while (simulationTime < deltaTime * timeScale)
+        while (simulationTime < deltaTime * renderer.timeScale)
         {
             float cannonLenght = cosf(cannon.angle) * cannon.L;
             if (p->position.y < -0.5 || p->position.x - cannon.position.x < 0 || p->position.x - cannon.position.x < -0.01f)
@@ -238,12 +246,16 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
             }
             simulationTime += c_deltaTime;
         }
-        absolute_time += deltaTime * timeScale;
+        absolute_time += deltaTime * renderer.timeScale;
         p->dSpeed = p->position - prevPosition;
         p->speedMagnitude = length(p->dSpeed);
+    }
+    else
+    {
+        absolute_time = 0;
     }
 
     renderer.DrawGround();
     renderer.DrawCannon(cannon);
-    renderer.DrawProjectileMotion(cannon, update);
+    renderer.DrawProjectileMotion(cannon, parametersUpdated);
 }
