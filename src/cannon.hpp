@@ -41,7 +41,7 @@ public:
     void DrawCannon(const Cannon& cannon);
     void DrawProjectileMotion(const Cannon& cannon, bool update);
 
-    bool DrawImgui(Cannon& cannon, bool &update);
+    void DrawImgui(Cannon& cannon, bool &update);
 
     std::vector<float2> curvePoints;
 
@@ -51,6 +51,7 @@ public:
 class CannonGame
 {
     bool update;
+    float time;
     float prevTime;
 public:
     CannonGame(CannonRenderer& renderer);

@@ -5,7 +5,6 @@
 // 2. Ajouter les opérateurs mathématiques nécessaires afin que le code ci-dessous fonctionne
 
 #include <stdio.h>
-#include <stdio.h>
 
 struct float2
 {

@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Template", NULL, NULL);
     if (window == NULL)
         return 1;
-    
+
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
         ImGui::NewFrame();
 
         //ImGui::ShowDemoWindow(nullptr);
-        
+
         app->Update((float)deltaTime);
 
         // Rendering
