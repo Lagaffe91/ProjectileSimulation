@@ -75,13 +75,6 @@ void CannonRenderer::DrawCannon(const Cannon& cannon)
     dl->AddQuad(p[0], p[1], p[2], p[3], IM_COL32_WHITE);
 }
 
-inline float2 SimulateProjectilePos(float time, const Cannon& cannon, float2 p0)
-{
-    float2 position = {};
-    position = p0 + cannon.projectile.speed * time + (cannon.projectile.acceleration * time * time * 0.5f);
-    return (position);
-}
-
 bool UpdateProjectile(Cannon &cannon, float2 &projectilePos, float &prevTime, float &time)
 {
     Projectile* projectile = &cannon.projectile;
