@@ -49,6 +49,7 @@ int main(int argc, char* argv[])
 
 	double deltaTime = 0.0;
     // Main loop
+
     while (!glfwWindowShouldClose(window))
     {
 		double timeNow = glfwGetTime();
@@ -62,7 +63,7 @@ int main(int argc, char* argv[])
 
         //ImGui::ShowDemoWindow(nullptr);
         
-        app->Update(deltaTime);
+        app->Update((float)deltaTime);
 
         // Rendering
         ImGui::Render();

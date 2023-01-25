@@ -46,6 +46,7 @@ public:
 
 class CannonGame
 {
+    float prevTime;
 public:
     CannonGame(CannonRenderer& renderer);
     ~CannonGame() = default;

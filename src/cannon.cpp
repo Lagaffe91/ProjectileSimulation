@@ -78,48 +78,56 @@ void CannonRenderer::DrawCannon(const Cannon& cannon)
 inline float2 SimulateProjectilePos(float time, const Cannon& cannon, float2 p0)
 {
     float2 position = {};
-    float2 speed =
-    {
-        cannon.v0 * cosf(cannon.angle),
-        cannon.v0 * sinf(cannon.angle)
-    };
-    position = p0 + speed * time + (cannon.projectile.acceleration * time * time * 0.5f);
+    position = p0 + cannon.projectile.speed * time + (cannon.projectile.acceleration * time * time * 0.5f);
     return (position);
 }
  
 void CannonRenderer::DrawProjectileMotion(const Cannon& cannon, bool update)
 {
     Projectile *p = (Projectile *)&cannon.projectile;
-    this->curvePoints.clear();
-    float2 point = cannon.position;
-    static float2 prevPos = point;
     float time = 0;
     float dTime = 0.016f;
     float prevTime = 0;
-    if (point.y > 0)
+    if (update)
     {
+        float2 point = cannon.position;
+        this->curvePoints.clear();
+        float2 cannonExit =
+        {
+            cosf(cannon.angle) * cannon.L + cannon.position.x,
+            sinf(cannon.angle) * cannon.L + cannon.position.y
+        };
+        float2 cannonDeacceleration = { -GRAVITY * cosf(cannon.angle), -GRAVITY * sinf(cannon.angle)};
+        float exitSpeed = sqrtf(2 * -length(p->acceleration) * cannon.L + cannon.v0 * cannon.v0);
         for (size_t i = 0; i < this->curvePoints.capacity(); i++)
         {
             time += dTime;
             float cannonLenght = cosf(cannon.angle) * cannon.L;
             if (point.x - cannon.position.x < -0.01f)
                 ;
-            else if (point.x - cannon.position.x < cannonLenght)
+            else if (point.x - cannon.position.x <= cannonLenght)
             {
-                p->acceleration = { -GRAVITY * cosf(cannon.angle), -GRAVITY * sinf(cannon.angle)};
+                p->speed =
+                {
+                    cannon.v0 * cosf(cannon.angle),
+                    cannon.v0 * sinf(cannon.angle)
+                };
+                p->acceleration = cannonDeacceleration;
                 point    = SimulateProjectilePos(time, cannon, cannon.position);
-                prevPos  = point;
                 prevTime = time;
             }
-            else
+            else if (exitSpeed > 0)
             {
+                p->speed =
+                {
+                    exitSpeed * cosf(cannon.angle),
+                    exitSpeed * sinf(cannon.angle)
+                };
                 p->acceleration = { 0, -GRAVITY};
-                point = SimulateProjectilePos(time - prevTime, cannon, prevPos);
+                point = SimulateProjectilePos(time - prevTime, cannon, cannonExit);
             }
             if (point.y < -0.5 || point.x - cannon.position.x < 0)
-            {
                 break;
-            }
             else
                 this->curvePoints.push_back(this->ToPixels(point));
         }
@@ -143,6 +151,7 @@ CannonGame::CannonGame(CannonRenderer& renderer)
     cannon.L = 5.f;
     cannon.v0 = 50.f,
     cannon.projectile = { false, 30.f, cannon.position, { 0.f, 0.f }, { 0.f, 0.f } };
+    prevTime = 0;
 }
 
 void CannonGame::UpdateAndDraw(const float& deltaTime)
@@ -185,40 +194,47 @@ void CannonGame::UpdateAndDraw(const float& deltaTime)
     }
     ImGui::End();
 
-    // v^2 - v0^2 = 2gL
-    // v^2 = 2gL - v0^2
-    // v = sqrt 2gL - v0^2
     if (p->launched)
     {
         float c_deltaTime = 0.00001f;
         float simulationTime = 0;
 
+        float2 cannonExit =
+        {
+            cosf(cannon.angle) * cannon.L + cannon.position.x,
+            sinf(cannon.angle) * cannon.L + cannon.position.y
+        };
         float2 prevPosition = p->position;
-        static float2 lastPosition = cannon.position;
-        static float prevTime;
-
+        float exitSpeed = sqrtf(2 * -length(p->acceleration) * cannon.L + cannon.v0 * cannon.v0);
         while (simulationTime < deltaTime * timeScale)
         {
             float cannonLenght = cosf(cannon.angle) * cannon.L;
-            if (p->position.x - cannon.position.x < -0.01f)
-                ;
-            else if (p->position.x - cannon.position.x < cannonLenght)
-            {
-                p->acceleration = { -GRAVITY * cosf(cannon.angle), -GRAVITY * sinf(cannon.angle)};
-                p->position  = SimulateProjectilePos(absolute_time, cannon, cannon.position);
-                lastPosition = p->position;
-                prevTime     = absolute_time;
-            }
-            else
-            {
-                p->acceleration = { 0, -GRAVITY};
-                p->position = SimulateProjectilePos(absolute_time - prevTime, cannon, lastPosition);
-            }
-            if (p->position.y < -0.5 || p->position.x - cannon.position.x < 0)
+            if (p->position.y < -0.5 || p->position.x - cannon.position.x < 0 || p->position.x - cannon.position.x < -0.01f)
             {
                 p->launched = false;
                 prevTime = 0;
                 break;
+            }
+            else if (p->position.x - cannon.position.x < cannonLenght)
+            {
+                p->acceleration = { -GRAVITY * cosf(cannon.angle), -GRAVITY * sinf(cannon.angle)};
+                p->speed =
+                {
+                    cannon.v0 * cosf(cannon.angle),
+                    cannon.v0 * sinf(cannon.angle)
+                };
+                p->position  = SimulateProjectilePos(absolute_time, cannon, cannon.position);
+                prevTime     = absolute_time;
+            }
+            else if (exitSpeed > 0)
+            {
+                p->speed =
+                {
+                    exitSpeed * cosf(cannon.angle),
+                    exitSpeed * sinf(cannon.angle)
+                };
+                p->acceleration = { 0, -GRAVITY};
+                p->position = SimulateProjectilePos(absolute_time - prevTime, cannon, cannonExit);
             }
             simulationTime += c_deltaTime;
         }
