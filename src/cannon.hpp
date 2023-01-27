@@ -15,8 +15,8 @@ struct Projectile
 
 struct Cannon
 {
-    float2 position;
-    float angle, v0, L;
+    float2 p0, position;
+    float angle, v0, L, M;
     Projectile projectile;
 };
 
@@ -53,6 +53,7 @@ class CannonGame
     bool update;
     float time;
     float prevTime;
+    bool collision;
 public:
     CannonGame(CannonRenderer& renderer);
     ~CannonGame() = default;
